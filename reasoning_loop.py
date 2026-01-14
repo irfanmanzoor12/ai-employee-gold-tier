@@ -1,0 +1,307 @@
+"""
+Reasoning Loop - Silver Tier
+Analyzes tasks and creates Plan.md files using OpenAI
+"""
+import os
+import re
+import time
+import logging
+from pathlib import Path
+from datetime import datetime
+from openai import OpenAI
+
+
+class ReasoningLoop:
+    """Reads tasks from Needs_Action, creates Plan.md files"""
+
+    def __init__(self, vault_path: str, check_interval: int = 300):
+        """
+        Initialize Reasoning Loop
+
+        Args:
+            vault_path: Path to Obsidian vault
+            check_interval: Seconds between checks (default: 5 minutes)
+        """
+        self.vault_path = Path(vault_path)
+        self.needs_action = self.vault_path / 'Needs_Action'
+        self.plans_folder = self.vault_path / 'Plans'
+        self.check_interval = check_interval
+
+        # Ensure folders exist
+        self.needs_action.mkdir(parents=True, exist_ok=True)
+        self.plans_folder.mkdir(parents=True, exist_ok=True)
+
+        # Setup logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        self.logger = logging.getLogger('ReasoningLoop')
+
+        # Initialize OpenAI client
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            raise ValueError('OPENAI_API_KEY environment variable not set')
+
+        self.client = OpenAI(api_key=api_key)
+
+        # Track processed tasks
+        self.processed_tasks = set()
+
+    def get_unplanned_tasks(self) -> list:
+        """
+        Find tasks in Needs_Action that don't have plans yet
+
+        Returns:
+            List of task file paths that need planning
+        """
+        unplanned = []
+
+        for task_file in self.needs_action.glob('*.md'):
+            # Skip if already processed
+            if task_file.name in self.processed_tasks:
+                continue
+
+            # Check if plan already exists
+            plan_name = f"PLAN_{task_file.stem}.md"
+            plan_path = self.plans_folder / plan_name
+
+            if not plan_path.exists():
+                unplanned.append(task_file)
+
+        return unplanned
+
+    def analyze_task(self, task_file: Path) -> str:
+        """
+        Use Claude to analyze task and create plan
+
+        Args:
+            task_file: Path to task file
+
+        Returns:
+            Generated plan content
+        """
+        # Read task content
+        task_content = task_file.read_text()
+
+        # Extract task metadata
+        task_type = self._extract_metadata(task_content, 'type')
+        priority = self._extract_metadata(task_content, 'priority')
+
+        # Create prompt for Claude
+        prompt = f"""You are an AI employee assistant analyzing a task that needs planning.
+
+Task File: {task_file.name}
+Type: {task_type or 'unknown'}
+Priority: {priority or 'medium'}
+
+Task Content:
+{task_content}
+
+Create a detailed, actionable plan with:
+1. **Objective**: Clear 1-sentence goal
+2. **Analysis**: What needs to be done and why
+3. **Approach**: Step-by-step plan (3-7 steps)
+4. **Required Resources**: What's needed (files, credentials, APIs, etc.)
+5. **Risks & Considerations**: Potential issues
+6. **Success Criteria**: How to know it's complete
+
+Keep it concise, practical, and Silver Tier appropriate (not over-engineered).
+"""
+
+        try:
+            # Call OpenAI API
+            self.logger.info(f'Calling OpenAI API to analyze: {task_file.name}')
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                max_tokens=2000,
+                messages=[{
+                    "role": "user",
+                    "content": prompt
+                }]
+            )
+
+            plan_content = response.choices[0].message.content
+            self.logger.info(f'Plan generated for: {task_file.name}')
+
+            return plan_content
+
+        except Exception as e:
+            self.logger.error(f'Error calling OpenAI API: {e}')
+            raise
+
+    def create_plan_file(self, task_file: Path, plan_content: str) -> Path:
+        """
+        Create Plan.md file and link to original task
+
+        Args:
+            task_file: Original task file
+            plan_content: Generated plan from Claude
+
+        Returns:
+            Path to created plan file
+        """
+        # Create plan filename
+        plan_name = f"PLAN_{task_file.stem}.md"
+        plan_path = self.plans_folder / plan_name
+
+        # Build plan file with metadata
+        timestamp = datetime.now()
+
+        full_content = f"""---
+type: plan
+task_file: {task_file.name}
+created: {timestamp.isoformat()}
+status: pending_review
+---
+
+# Plan: {task_file.stem.replace('_', ' ')}
+
+**Created:** {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+**Original Task:** [[{task_file.stem}]]
+**Status:** 🟡 Pending Review
+
+---
+
+{plan_content}
+
+---
+
+## Next Steps
+
+- [ ] **Human Review Required**
+- [ ] Approve plan → Move task to Approved/
+- [ ] Reject plan → Refine approach
+- [ ] Execute plan steps
+
+---
+
+*Generated by Reasoning Loop - Silver Tier AI Employee*
+*Task: {task_file.name}*
+"""
+
+        # Write plan file
+        plan_path.write_text(full_content)
+
+        # Update original task with plan link
+        self._link_plan_to_task(task_file, plan_name)
+
+        self.logger.info(f'Created plan: {plan_name}')
+
+        return plan_path
+
+    def _link_plan_to_task(self, task_file: Path, plan_name: str):
+        """Add plan reference to original task file"""
+        try:
+            content = task_file.read_text()
+
+            # Add plan link if not already present
+            if '## 📋 Plan' not in content:
+                plan_link = f"\n\n## 📋 Plan\n\n**Plan created:** [[{plan_name.replace('.md', '')}]]\n"
+                content += plan_link
+                task_file.write_text(content)
+        except Exception as e:
+            self.logger.error(f'Error linking plan to task: {e}')
+
+    def _extract_metadata(self, content: str, key: str) -> str:
+        """Extract metadata value from frontmatter"""
+        pattern = rf'^{key}:\s*(.+)$'
+        match = re.search(pattern, content, re.MULTILINE)
+        return match.group(1).strip() if match else None
+
+    def process_tasks(self):
+        """Main processing loop - find and plan tasks"""
+        unplanned = self.get_unplanned_tasks()
+
+        if not unplanned:
+            self.logger.debug('No unplanned tasks found')
+            return
+
+        self.logger.info(f'Found {len(unplanned)} tasks that need planning')
+
+        for task_file in unplanned:
+            try:
+                self.logger.info(f'Processing task: {task_file.name}')
+
+                # Generate plan with Claude
+                plan_content = self.analyze_task(task_file)
+
+                # Create plan file
+                plan_path = self.create_plan_file(task_file, plan_content)
+
+                # Mark as processed
+                self.processed_tasks.add(task_file.name)
+
+                self.logger.info(f'✅ Plan created: {plan_path.name}')
+
+            except Exception as e:
+                self.logger.error(f'Error processing {task_file.name}: {e}')
+                continue
+
+    def run(self):
+        """Main loop - runs continuously"""
+        self.logger.info('='*70)
+        self.logger.info('Reasoning Loop Started - Silver Tier')
+        self.logger.info('='*70)
+        self.logger.info(f'Vault: {self.vault_path}')
+        self.logger.info(f'Check interval: {self.check_interval} seconds')
+        self.logger.info(f'Monitoring: {self.needs_action}')
+        self.logger.info('='*70)
+
+        while True:
+            try:
+                self.process_tasks()
+
+            except KeyboardInterrupt:
+                self.logger.info('Stopping Reasoning Loop...')
+                break
+            except Exception as e:
+                self.logger.error(f'Error in reasoning loop: {e}', exc_info=True)
+
+            time.sleep(self.check_interval)
+
+
+if __name__ == '__main__':
+    import sys
+
+    # Configuration
+    VAULT_PATH = '../AI_Employee_Vault'
+    CHECK_INTERVAL = 300  # 5 minutes
+
+    print("🧠 Reasoning Loop - Silver Tier AI Employee")
+    print("=" * 70)
+    print()
+
+    # Check API key
+    if not os.getenv('OPENAI_API_KEY'):
+        print("❌ OPENAI_API_KEY environment variable not set!")
+        print()
+        print("Set it with:")
+        print("export OPENAI_API_KEY='your-api-key-here'")
+        print()
+        sys.exit(1)
+
+    print("Starting Reasoning Loop...")
+    print(f"Vault: {VAULT_PATH}")
+    print(f"Check interval: {CHECK_INTERVAL} seconds (5 minutes)")
+    print()
+    print("The loop will:")
+    print("1. Monitor Needs_Action/ for tasks")
+    print("2. Analyze tasks with Claude")
+    print("3. Generate Plan.md files in Plans/")
+    print("4. Link plans to original tasks")
+    print()
+    print("Press Ctrl+C to stop")
+    print()
+
+    try:
+        loop = ReasoningLoop(VAULT_PATH, CHECK_INTERVAL)
+        loop.run()
+    except KeyboardInterrupt:
+        print()
+        print("Reasoning Loop stopped by user")
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()

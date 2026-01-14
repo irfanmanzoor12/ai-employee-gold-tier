@@ -1,0 +1,24 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Sensitive credentials and tokens
+credentials.json
+token.json
+token_readonly.json.backup
+*.pem
+*.key
+
+# Session data
+.linkedin_session/
+.linkedin_drafts/
+
+# Logs (optional - can commit for demo)
+# Logs/
