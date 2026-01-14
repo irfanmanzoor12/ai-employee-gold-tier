@@ -6,6 +6,38 @@ Perfect for showing judges or stakeholders what your system can do.
 
 ---
 
+## 🚀 ONE-COMMAND DEMO (30 seconds - Fastest!)
+
+```bash
+cd /mnt/d/Irfan/FTE-H/watchers && \
+echo "=== BRONZE: Vault Structure ===" && ls -la ../AI_Employee_Vault/ && \
+echo -e "\n=== SILVER: Complete Test ===" && .venv/bin/python test_silver_tier_complete.py | tail -15 && \
+echo -e "\n=== GOLD: Complete Test ===" && .venv/bin/python test_gold_tier_complete.py | tail -20
+```
+
+**Shows:** Bronze + Silver + Gold in one command!
+
+---
+
+## Demo 0: Bronze Tier (10 seconds)
+
+```bash
+cd /mnt/d/Irfan/FTE-H/watchers
+
+# Show vault structure
+ls -la ../AI_Employee_Vault/
+
+# Show watchers exist
+ls -1 *_watcher.py
+```
+
+**What to show:**
+- ✅ Vault folder structure exists
+- ✅ All watcher components present
+- ✅ Bronze Tier foundation complete
+
+---
+
 ## Demo 1: Complete System Health Check (30 seconds)
 
 ```bash
@@ -42,6 +74,34 @@ cd /mnt/d/Irfan/FTE-H/watchers
 - ✅ Email sent successfully
 - Message ID returned
 - **Check inbox live** - show email received!
+
+---
+
+## Demo 2A: Agent Skills Framework (30 seconds)
+
+```bash
+# Test skills
+.venv/bin/python test_skills.py
+```
+
+**What to show:**
+- 📦 2 skills discovered (reasoning + drafting)
+- ✅ Both skills execute successfully
+- ✅ Execution logs created
+
+---
+
+## Demo 2B: QuickBooks MCP Server (30 seconds)
+
+```bash
+# Show financial summary
+.venv/bin/python quickbooks_mcp_server.py summary
+```
+
+**What to show:**
+- 💰 Financial data: Income, expenses, net income
+- 📊 Account balances
+- ✅ QuickBooks MCP operational
 
 ---
 
