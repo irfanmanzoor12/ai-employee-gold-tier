@@ -1,0 +1,20 @@
+2026-01-12 19:42:34,843 - INFO - Starting scheduled task: daily_briefing
+2026-01-12 19:42:34,845 - INFO - === DAILY BRIEFING ===
+2026-01-12 19:42:34,854 - INFO - Found 0 pending tasks
+2026-01-12 19:42:34,872 - INFO - Approvals: 0 pending, 0 approved
+2026-01-12 19:42:34,896 - INFO - Completed in last 24h: 4
+2026-01-12 19:42:34,896 - INFO - 
+Daily Briefing - 2026-01-12 19:42
+==================================================
+Pending Tasks: 0
+Pending Approvals: 0
+Approved Actions: 0
+Completed (24h): 4
+==================================================
+
+2026-01-12 19:42:34,902 - INFO - Completed scheduled task: daily_briefing
+2026-01-12 19:42:42,656 - INFO - Starting scheduled task: hourly_check
+2026-01-12 19:42:42,657 - INFO - === HOURLY CHECK ===
+2026-01-12 19:42:42,701 - INFO - Found 0 pending tasks
+2026-01-12 19:42:42,719 - INFO - Approvals: 0 pending, 0 approved
+2026-01-12 19:42:42,720 - INFO - Completed scheduled task: hourly_check

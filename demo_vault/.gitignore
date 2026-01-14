@@ -1,0 +1,4 @@
+# Exclude sensitive or personal data
+# Include everything else as demo data
+
+# No exclusions needed - all demo/test data is safe to share
