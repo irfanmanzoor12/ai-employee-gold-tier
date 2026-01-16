@@ -51,26 +51,33 @@ except Exception as e:
     test_fail("Gmail MCP", str(e))
 print()
 
-# Test 3: QuickBooks MCP Server
-print("TEST 3: QuickBooks MCP Server")
+# Test 3: Odoo MCP Server (Required for Gold Tier)
+print("TEST 3: Odoo MCP Server")
 print("-" * 70)
 try:
-    from quickbooks_mcp_server import QuickBooksMCPServer
-    server = QuickBooksMCPServer(mode='sandbox')
+    from odoo_mcp_server import OdooMCPServer
+    server = OdooMCPServer(mode='sandbox')
     tools = server.get_tools_definition()
     if len(tools) >= 4:
-        test_pass(f"QuickBooks MCP operational: {len(tools)} tools")
+        test_pass(f"Odoo MCP operational: {len(tools)} tools")
     else:
-        test_fail("QuickBooks MCP", f"Only {len(tools)} tools found")
+        test_fail("Odoo MCP", f"Only {len(tools)} tools found")
 
     # Test financial data
     balances = server.get_account_balances()
     if balances.get('success'):
-        test_pass(f"QuickBooks data access: ${balances['total_assets']:,.2f} assets")
+        test_pass(f"Odoo data access: ${balances['total_assets']:,.2f} assets")
     else:
-        test_fail("QuickBooks data", "Failed to get balances")
+        test_fail("Odoo data", "Failed to get balances")
+
+    # Test invoices
+    invoices = server.get_invoices()
+    if invoices.get('success'):
+        test_pass(f"Odoo invoices: {invoices['total_count']} invoices")
+    else:
+        test_fail("Odoo invoices", "Failed to get invoices")
 except Exception as e:
-    test_fail("QuickBooks MCP", str(e))
+    test_fail("Odoo MCP", str(e))
 print()
 
 # Test 4: Ralph Wiggum Loop
@@ -86,10 +93,10 @@ try:
     else:
         test_fail("Gmail MCP integration", "Not loaded")
 
-    if 'quickbooks' in loop.mcp_servers:
-        test_pass("QuickBooks MCP integrated with Ralph Wiggum")
+    if 'odoo' in loop.mcp_servers:
+        test_pass("Odoo MCP integrated with Ralph Wiggum")
     else:
-        test_fail("QuickBooks MCP integration", "Not loaded")
+        test_fail("Odoo MCP integration", "Not loaded")
 
 except Exception as e:
     test_fail("Ralph Wiggum", str(e))
@@ -114,6 +121,29 @@ try:
 
 except Exception as e:
     test_fail("Weekly Audit", str(e))
+print()
+
+# Test 5B: Scheduler
+print("TEST 5B: Cron Scheduler")
+print("-" * 70)
+try:
+    from scheduler import AIEmployeeScheduler
+    scheduler = AIEmployeeScheduler('../AI_Employee_Vault')
+
+    if len(scheduler.tasks) >= 5:
+        test_pass(f"Scheduler initialized: {len(scheduler.tasks)} tasks configured")
+    else:
+        test_fail("Scheduler", f"Only {len(scheduler.tasks)} tasks")
+
+    # Test crontab generation
+    crontab = scheduler.generate_crontab()
+    if 'gmail_watcher' in crontab and 'weekly_audit' in crontab:
+        test_pass("Crontab generation: working")
+    else:
+        test_fail("Crontab generation", "Missing entries")
+
+except Exception as e:
+    test_fail("Scheduler", str(e))
 print()
 
 # Test 6: Execution Logs
@@ -186,9 +216,10 @@ else:
     print()
     print("✅ Agent Skills Framework: Working")
     print("✅ Gmail MCP Server: Working")
-    print("✅ QuickBooks MCP Server: Working")
+    print("✅ Odoo MCP Server: Working")
     print("✅ Ralph Wiggum Loop: Working")
     print("✅ Weekly Audit Generator: Working")
+    print("✅ Scheduler: Working")
     print("✅ Complete Integration: Working")
     print()
     print("🏆 GOLD TIER COMPLETE - READY FOR SUBMISSION!")

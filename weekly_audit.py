@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List
 
 # MCP Servers
-from quickbooks_mcp_server import QuickBooksMCPServer
+from odoo_mcp_server import OdooMCPServer
 
 
 class WeeklyAuditGenerator:
@@ -44,21 +44,36 @@ class WeeklyAuditGenerator:
         self.logs_folder.mkdir(exist_ok=True)
 
         # Initialize MCP servers
-        self.quickbooks = QuickBooksMCPServer(mode='sandbox')
+        self.odoo = OdooMCPServer(mode='sandbox')
 
     def collect_financial_data(self) -> Dict[str, Any]:
-        """Collect financial data from QuickBooks"""
-        print("📊 Collecting financial data...")
+        """Collect financial data from Odoo"""
+        print("📊 Collecting financial data from Odoo...")
 
-        summary = self.quickbooks.get_financial_summary(period='week')
-        balances = self.quickbooks.get_account_balances()
-        transactions = self.quickbooks.get_recent_transactions(days=7)
+        summary = self.odoo.get_financial_summary(period='week')
+        balances = self.odoo.get_account_balances()
+        payments = self.odoo.get_payments(days=7)
+        invoices = self.odoo.get_invoices(state='unpaid')
 
+        # Map Odoo data to expected format
         return {
-            'summary': summary.get('summary', {}),
+            'summary': {
+                'total_income': summary.get('revenue', {}).get('total_received', 0),
+                'total_expenses': summary.get('expenses', {}).get('paid', 0),
+                'net_income': summary.get('profitability', {}).get('gross_profit', 0),
+                'profit_margin': summary.get('profitability', {}).get('profit_margin_percent', 0)
+            },
             'balances': balances.get('accounts', []),
-            'transactions': transactions.get('transactions', []),
-            'transaction_count': transactions.get('count', 0)
+            'transactions': [
+                {
+                    'date': p['payment_date'],
+                    'description': f"Payment from {p['partner_name']}",
+                    'amount': p['amount']
+                } for p in payments.get('payments', [])
+            ],
+            'transaction_count': len(payments.get('payments', [])),
+            'unpaid_invoices': invoices.get('invoices', []),
+            'total_outstanding': sum(i['amount_residual'] for i in invoices.get('invoices', []))
         }
 
     def collect_email_activity(self) -> Dict[str, Any]:
@@ -289,7 +304,7 @@ This report provides a comprehensive overview of business performance, system ac
 | Drafting Agent | ✅ Operational | Creating content |
 | Ralph Wiggum Loop | ✅ Operational | Executing plans |
 | Gmail MCP Server | ✅ Operational | Sending emails |
-| QuickBooks MCP | ✅ Operational | Financial data access |
+| Odoo MCP Server | ✅ Operational | Financial/accounting data |
 | Skills Framework | ✅ Operational | Agent skills active |
 
 ---

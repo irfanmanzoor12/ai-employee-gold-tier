@@ -20,7 +20,7 @@ from openai import OpenAI
 
 # MCP Server integration
 from gmail_mcp_server import GmailMCPServer
-from quickbooks_mcp_server import QuickBooksMCPServer
+from odoo_mcp_server import OdooMCPServer
 
 
 class RalphWiggumLoop:
@@ -64,7 +64,7 @@ class RalphWiggumLoop:
         # Initialize MCP servers
         self.mcp_servers = {
             'gmail': GmailMCPServer(),
-            'quickbooks': QuickBooksMCPServer(mode='sandbox')
+            'odoo': OdooMCPServer(mode='sandbox')
         }
 
         # Logging
@@ -154,7 +154,7 @@ class RalphWiggumLoop:
 
         if any(word in desc_lower for word in ['email', 'send email', 'reply', 'respond']):
             return 'email'
-        elif any(word in desc_lower for word in ['financial', 'quickbooks', 'expense', 'balance', 'transaction', 'accounting']):
+        elif any(word in desc_lower for word in ['financial', 'odoo', 'invoice', 'balance', 'payment', 'accounting']):
             return 'financial'
         elif any(word in desc_lower for word in ['generate', 'create', 'draft', 'write']):
             return 'generate'
@@ -293,7 +293,7 @@ Generate the requested content.
             }
 
     def execute_financial_step(self, step: Dict, context: Dict) -> Dict:
-        """Execute a financial action step using QuickBooks MCP server"""
+        """Execute a financial action step using Odoo MCP server"""
         self.logger.info(f"Executing financial step: {step['description']}")
 
         # Use AI to extract financial action from step description
@@ -304,10 +304,11 @@ Task: {step['description']}
 Context:
 {json.dumps(context, indent=2)}
 
-Determine which QuickBooks action is needed:
+Determine which Odoo action is needed:
 - "get_balances" - Get account balances
-- "get_transactions" - Get recent transactions
-- "create_expense" - Create an expense entry
+- "get_invoices" - Get invoices (optionally filter by state: draft, posted, paid, unpaid)
+- "get_payments" - Get recent payments
+- "create_invoice" - Create a customer invoice
 - "get_summary" - Get financial summary
 
 Return JSON with:
@@ -316,13 +317,20 @@ Return JSON with:
   "params": {{}}
 }}
 
-If it's create_expense, include:
+If it's get_invoices, include state filter:
 {{
-  "action": "create_expense",
+  "action": "get_invoices",
   "params": {{
-    "description": "expense description",
-    "amount": 100.00,
-    "category": "Operating Expenses"
+    "state": "unpaid"
+  }}
+}}
+
+If it's create_invoice, include:
+{{
+  "action": "create_invoice",
+  "params": {{
+    "partner_id": 1,
+    "lines": [{{"product": "Service", "quantity": 1, "price": 100.00}}]
   }}
 }}
 """
@@ -350,17 +358,19 @@ If it's create_expense, include:
             action = action_data.get('action')
             params = action_data.get('params', {})
 
-            # Execute via QuickBooks MCP server
-            qb_server = self.mcp_servers['quickbooks']
+            # Execute via Odoo MCP server
+            odoo_server = self.mcp_servers['odoo']
 
             if action == 'get_balances':
-                result = qb_server.get_account_balances()
-            elif action == 'get_transactions':
-                result = qb_server.get_recent_transactions(**params)
-            elif action == 'create_expense':
-                result = qb_server.create_expense(**params)
+                result = odoo_server.get_account_balances()
+            elif action == 'get_invoices':
+                result = odoo_server.get_invoices(**params)
+            elif action == 'get_payments':
+                result = odoo_server.get_payments(**params)
+            elif action == 'create_invoice':
+                result = odoo_server.create_invoice(**params)
             elif action == 'get_summary':
-                result = qb_server.get_financial_summary(**params)
+                result = odoo_server.get_financial_summary(**params)
             else:
                 result = {
                     'success': False,
