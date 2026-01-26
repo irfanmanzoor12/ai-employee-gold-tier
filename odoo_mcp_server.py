@@ -698,6 +698,68 @@ class OdooMCPServer:
                 'error': str(e)
             }
 
+    def create_partner(self, name: str, email: str = None, phone: str = None) -> Dict[str, Any]:
+        """
+        Create a new customer/partner in Odoo.
+
+        Args:
+            name: Partner name
+            email: Partner email
+            phone: Partner phone
+
+        Returns:
+            Created partner details
+        """
+        if self.mode == "sandbox":
+            new_id = max(p['id'] for p in self.partners) + 1 if self.partners else 1
+            new_partner = {
+                'id': new_id,
+                'name': name,
+                'email': email or f"{name.lower().replace(' ', '_')}@example.com",
+                'phone': phone or 'N/A'
+            }
+            self.partners.append(new_partner)
+            return {
+                'success': True,
+                'partner': new_partner,
+                'message': f'Customer {name} created successfully',
+                'mode': 'sandbox'
+            }
+
+        # Production: create partner via Odoo API
+        try:
+            partner_id = self._json_rpc_call(
+                '/jsonrpc',
+                'call',
+                {
+                    'service': 'object',
+                    'method': 'execute_kw',
+                    'args': [
+                        self.db, self.uid, self.password,
+                        'res.partner', 'create',
+                        [{
+                            'name': name,
+                            'email': email,
+                            'phone': phone,
+                            'customer_rank': 1,
+                        }]
+                    ]
+                }
+            )
+
+            return {
+                'success': True,
+                'partner_id': partner_id,
+                'partner': {'id': partner_id, 'name': name, 'email': email, 'phone': phone},
+                'message': f'Customer {name} created with ID {partner_id}',
+                'mode': 'production'
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
     def get_tools_definition(self) -> List[Dict]:
         """
         Get MCP tools definition for Claude Code integration.

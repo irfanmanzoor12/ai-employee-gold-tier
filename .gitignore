@@ -22,3 +22,4 @@ token_readonly.json.backup
 
 # Logs (optional - can commit for demo)
 # Logs/
+.env
