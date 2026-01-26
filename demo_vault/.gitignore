@@ -1,4 +1,19 @@
-# Exclude sensitive or personal data
-# Include everything else as demo data
+# Security: Never sync secrets
+*.env
+*.key
+*.pem
+credentials*
+token*
+secrets*
 
-# No exclusions needed - all demo/test data is safe to share
+# Session data
+.session/
+*_session/
+
+# Local-only
+.obsidian/
+.trash/
+
+# OS files
+.DS_Store
+Thumbs.db
