@@ -1,2 +1,0 @@
-{"timestamp": "2026-01-12T19:15:40.924107", "event": "request_created", "filename": "APPROVAL_send_email_20260112_191540.md", "action_type": "send_email", "priority": "medium"}
-{"timestamp": "2026-01-12T19:19:21.184430", "event": "request_approved", "filename": "APPROVAL_send_email_20260112_191540.md", "action_type": "send_email"}

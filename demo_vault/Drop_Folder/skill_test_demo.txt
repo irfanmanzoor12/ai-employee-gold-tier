@@ -1,6 +1,0 @@
-This is a demo file to test the process-tasks Agent Skill!
-
-Created: 2026-01-12 16:27
-Purpose: Verify that Agent Skills work correctly
-
-If you're reading this through the skill, SUCCESS! 🎉
