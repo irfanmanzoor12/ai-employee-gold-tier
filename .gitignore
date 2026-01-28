@@ -26,3 +26,4 @@ token_readonly.json.backup
 
 # Archive folder (old/unused files)
 _archive/
+streamlit.log
